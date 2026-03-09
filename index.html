@@ -231,7 +231,7 @@
     var map = L.map('ddt-map', {
         scrollWheelZoom: false,
         attributionControl: true
-    }).setView([47.7, -120.5], 6);
+    }).fitBounds([[46.5, -123.5], [49.2, -117.5]], { padding: [20, 20] });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
