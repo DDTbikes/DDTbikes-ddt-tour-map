@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDT Multi-Day Tours</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+
+        body { margin: 0; padding: 0; background: transparent; }
+
+        #ddt-map-wrap {
+            max-width: 640px;
+            margin: 0 auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+            font-family: 'Lora', Georgia, serif;
+        }
+
+        #ddt-map-header {
+            background: #fafafa;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 14px 20px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: rgb(204, 108, 29);
+        }
+
+        #ddt-map {
+            height: 420px;
+            width: 100%;
+        }
+
+        #ddt-map-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 14px 20px;
+            background: #fafafa;
+            border-top: 1px solid #e8e8e8;
+        }
+
+        .ddt-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .ddt-legend-item:hover {
+            opacity: 0.75;
+        }
+
+        .ddt-legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Leaflet popup overrides */
+        .ddt-popup .leaflet-popup-content-wrapper {
+            border-radius: 10px;
+            padding: 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .ddt-popup .leaflet-popup-content {
+            margin: 0;
+            min-width: 200px;
+        }
+
+        .ddt-popup .leaflet-popup-tip {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .ddt-popup-inner {
+            padding: 16px 18px;
+        }
+
+        .ddt-popup-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            letter-spacing: 0.3px;
+            margin: 0 0 6px;
+            line-height: 1.3;
+        }
+
+        .ddt-popup-location {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .ddt-popup-desc {
+            font-family: 'Lora', Georgia, serif;
+            font-size: 13.5px;
+            line-height: 1.55;
+            color: #555;
+            margin: 0 0 12px;
+        }
+
+        .ddt-popup-meta {
+            display: flex;
+            gap: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #777;
+            margin-bottom: 12px;
+        }
+
+        .ddt-popup-link {
+            display: inline-block;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            text-decoration: none;
+            color: #fff;
+            background: rgb(204, 108, 29);
+            padding: 7px 16px;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+
+        .ddt-popup-link:hover {
+            background: rgb(224, 128, 39);
+        }
+
+        /* Custom marker pulse */
+        .ddt-marker {
+            border-radius: 50%;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .ddt-marker:hover {
+            transform: scale(1.15);
+        }
+
+        @media (max-width: 600px) {
+            #ddt-map { height: 340px; }
+            #ddt-map-legend { gap: 8px; padding: 12px 14px; }
+            .ddt-legend-item { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="ddt-map-wrap">
+    <div id="ddt-map-header">Multi-Day Tours</div>
+    <div id="ddt-map"></div>
+    <div id="ddt-map-legend"></div>
+</div>
+
+<script>
+(function() {
+    var tours = [
+        {
+            name: 'Best of Bellingham',
+            lat: 48.7519,
+            lng: -122.4787,
+            color: 'rgb(55, 130, 65)',
+            town: 'Bellingham, WA',
+            days: '3 Days',
+            level: 'Int/Adv',
+            price: '$1,350 / $2,650',
+            desc: 'Ride the best singletrack in Bellingham — from Galbraith to Chuckanuts, three days of PNW trail perfection.',
+            url: 'https://www.digdeeptours.com/bellingham-mountain-bike-tour'
+        },
+        {
+            name: 'Rain Shadow',
+            lat: 48.4838,
+            lng: -120.2062,
+            color: 'rgb(185, 50, 30)',
+            town: 'Winthrop, WA',
+            days: '4 Days',
+            level: 'Int/Adv',
+            price: '$1,450 / $3,300',
+            desc: 'From Devil\'s Gulch to Angel\'s Staircase — epic descents and alpine riding across Eastern Washington\'s high desert.',
+            url: 'https://www.digdeeptours.com/north-cascades-mountain-bike-tour'
+        },
+        {
+            name: 'Ponderosa Pedal',
+            lat: 48.4638,
+            lng: -120.1662,
+            color: 'rgb(180, 140, 40)',
+            town: 'Winthrop, WA',
+            days: 'Multi-Day',
+            level: 'Intermediate',
+            price: 'Contact Us',
+            desc: 'Cruise through ponderosa groves and sage meadows on the Methow Valley\'s finest mellow singletrack.',
+            url: 'https://www.digdeeptours.com'
+        },
+        {
+            name: 'Kettle Crest',
+            lat: 48.6479,
+            lng: -118.7382,
+            color: 'rgb(88, 55, 140)',
+            town: 'Republic, WA',
+            days: '4 Days',
+            level: 'Int/Adv',
+            price: '$1,450 / $2,900',
+            desc: 'Explore one of Washington\'s most underrated riding regions — remote backcountry trails along the Kettle Crest.',
+            url: 'https://www.digdeeptours.com/kettle-crest-mountain-bike-tour'
+        }
+    ];
+
+    // Init map — centered to show all of northern WA
+    var map = L.map('ddt-map', {
+        scrollWheelZoom: false,
+        attributionControl: true
+    }).setView([48.62, -120.5], 8);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 13,
+        minZoom: 7
+    }).addTo(map);
+
+    // Build legend
+    var legend = document.getElementById('ddt-map-legend');
+
+    tours.forEach(function(tour) {
+        // Create custom marker
+        var icon = L.divIcon({
+            className: '',
+            html: '<div class="ddt-marker" style="background:' + tour.color + '; width:20px; height:20px;"></div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13],
+            popupAnchor: [0, -16]
+        });
+
+        var marker = L.marker([tour.lat, tour.lng], { icon: icon }).addTo(map);
+
+        var popupHTML =
+            '<div class="ddt-popup-inner">' +
+                '<div class="ddt-popup-title" style="color:' + tour.color + ';">' + tour.name + '</div>' +
+                '<div class="ddt-popup-location">' + tour.town + '</div>' +
+                '<p class="ddt-popup-desc">' + tour.desc + '</p>' +
+                '<div class="ddt-popup-meta">' +
+                    '<span>' + tour.days + '</span>' +
+                    '<span>' + tour.level + '</span>' +
+                    '<span>' + tour.price + '</span>' +
+                '</div>' +
+                '<a class="ddt-popup-link" href="' + tour.url + '" target="_top">View Tour</a>' +
+            '</div>';
+
+        marker.bindPopup(popupHTML, {
+            className: 'ddt-popup',
+            maxWidth: 260
+        });
+
+        // Legend item
+        var item = document.createElement('div');
+        item.className = 'ddt-legend-item';
+        item.innerHTML = '<span class="ddt-legend-dot" style="background:' + tour.color + ';"></span>' + tour.name;
+        item.addEventListener('click', function() {
+            map.setView([tour.lat, tour.lng], 10);
+            marker.openPopup();
+        });
+        legend.appendChild(item);
+    });
+
+    // Auto-resize: send height to parent iframe
+    function notifyHeight() {
+        var h = document.body.scrollHeight + 32;
+        window.parent.postMessage({ ddt_height: h }, '*');
+    }
+    notifyHeight();
+    window.addEventListener('resize', notifyHeight);
+    setTimeout(notifyHeight, 500);
+    setTimeout(notifyHeight, 1500);
+    var observer = new MutationObserver(notifyHeight);
+    observer.observe(document.getElementById('ddt-map-wrap'), { childList: true, subtree: true, attributes: true });
+})();
+</script>
+
+</body>
+</html>
